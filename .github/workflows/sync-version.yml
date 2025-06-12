@@ -1,0 +1,124 @@
+name: Auto Sync Version & Release
+
+# const.py가 변경되면 실행
+on:
+  push:
+    paths:
+      - 'custom_components/kocom_wallpad/const.py'
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  sync-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. 코드 가져오기
+      - name: 코드 가져오기
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0  # 전체 히스토리 가져오기
+
+      # 2. const.py에서 버전 추출
+      - name: 버전 추출
+        id: get_version
+        run: |
+          VERSION=$(grep -oP 'SW_VERSION\s*=\s*["\047]\K[^"\047]+' custom_components/kocom_wallpad/const.py)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "📋 찾은 버전: $VERSION"
+
+      # 3. 이미 존재하는 태그인지 확인
+      - name: 기존 태그 확인
+        id: check_tag
+        run: |
+          if git rev-parse "v${{ steps.get_version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "⚠️ 태그 v${{ steps.get_version.outputs.version }}가 이미 존재합니다"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "✅ 새로운 버전입니다"
+          fi
+
+      # 4. manifest.json 업데이트
+      - name: manifest.json 업데이트
+        run: |
+          python3 -c "
+          import json
+          
+          with open('custom_components/kocom_wallpad/manifest.json', 'r') as f:
+              manifest = json.load(f)
+          
+          manifest['version'] = '${{ steps.get_version.outputs.version }}'
+          
+          with open('custom_components/kocom_wallpad/manifest.json', 'w') as f:
+              json.dump(manifest, f, indent=2)
+          
+          print('✅ manifest.json 업데이트 완료')
+          "
+
+      # 5. 변경사항 확인
+      - name: 변경사항 확인
+        id: check_changes
+        run: |
+          if git diff --quiet; then
+            echo "changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      # 6. 변경사항 커밋
+      - name: 변경사항 커밋
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action Bot"
+          git add custom_components/kocom_wallpad/manifest.json
+          git commit -m "🔄 Auto-sync manifest.json version to ${{ steps.get_version.outputs.version }}"
+          git push
+
+      # 7. 마지막 커밋에서 본문 추출
+      - name: 릴리즈 노트 생성
+        if: steps.check_tag.outputs.exists == 'false'
+        id: release_notes
+        run: |
+          # 마지막 커밋의 전체 메시지 가져오기
+          FULL_MESSAGE=$(git log -1 --pretty=format:"%B" HEAD~1)
+          
+          # 첫 번째 줄 (제목) 제거하고 본문만 추출
+          EXTENDED_DESC=$(echo "$FULL_MESSAGE" | tail -n +2 | sed '/^$/d' | sed '/^[[:space:]]*$/d')
+          
+          if [ -n "$EXTENDED_DESC" ]; then
+            # Extended description이 있으면 사용 (본문만)
+            RELEASE_BODY="- $EXTENDED_DESC"
+          else
+            # Extended description이 없으면 기본 메시지
+            RELEASE_BODY="- 버전 ${{ steps.get_version.outputs.version }} 업데이트"
+          fi
+          
+          # 릴리즈 노트 파일 생성
+          echo "$RELEASE_BODY" > release_notes.md
+
+      # 8. GitHub Release 생성
+      - name: GitHub Release 생성
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_version.outputs.tag }}
+          name: "v${{ steps.get_version.outputs.version }}"
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ contains(steps.get_version.outputs.version, 'beta') || contains(steps.get_version.outputs.version, 'alpha') || contains(steps.get_version.outputs.version, 'rc') }}
+
+      # 9. 완료 알림
+      - name: 완료 알림
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          echo "🎉 릴리즈 생성 완료!"
+          echo "📋 버전: ${{ steps.get_version.outputs.version }}"
+          echo "🏷️ 태그: ${{ steps.get_version.outputs.tag }}"
+          echo "🔗 링크: https://github.com/${{ github.repository }}/releases/tag/${{ steps.get_version.outputs.tag }}"
