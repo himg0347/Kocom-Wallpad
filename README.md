@@ -4,13 +4,13 @@
 Home Assistant를 위한 Kocom Wallpad 통합구성요소
 
 ## 기여
-문제가 있나요? [Issues](https://github.com/lunDreame/kocom-wallpad/issues) 탭에 작성해 주세요.
+문제가 있나요? [Issues](https://github.com/himg0347/kocom-wallpad/issues) 탭에 작성해 주세요.
 
 - 베타 버전입니다.
-- 더 좋은 아이디어가 있나요? [Pull requests](https://github.com/lunDreame/kocom-wallpad/pulls)로 공유해 주세요!
+- 더 좋은 아이디어가 있나요? [Pull requests](https://github.com/himg0347/kocom-wallpad/pulls)로 공유해 주세요!
 - 이 통합을 사용하면서 발생하는 문제에 대해서는 책임지지 않습니다.
 
-도움이 되셨나요? [카카오페이](https://qr.kakaopay.com/FWDWOBBmR) [토스](https://toss.me/lundreamer)
+도움이 되셨나요? [카카오페이](https://qr.kakaopay.com/?)
 
 ## 설치
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=lunDreame&repository=kocom-wallpad&category=Integration)
@@ -51,7 +51,7 @@ Home Assistant를 위한 Kocom Wallpad 통합구성요소
 - 문제 파악을 위해 아래 코드를 `configuration.yaml` 파일에 추가 후 HomeAssistant를 재시작해 주세요.
 - 디버깅 외에는 활성화하지 마세요.
 
-문의 [이메일](mailto:lundreame34@gmail.com)로 연락 부탁드립니다.
+문의 [이메일](mailto:kalest27@me.com)로 연락 부탁드립니다.
 
 ```yaml
 logger:
