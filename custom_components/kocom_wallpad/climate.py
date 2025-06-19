@@ -21,12 +21,13 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .pywallpad.const import (
     POWER,
-    AWAY,
-    OPER_MODE,
+    AWAY_MODE,
+    OP_MODE,
     FAN_MODE,
     CURRENT_TEMP,
     TARGET_TEMP,
 )
+from .pywallpad.enums import OpMode, FanMode
 from .pywallpad.packet import KocomPacket, ThermostatPacket, ACPacket
 
 from .gateway import KocomGateway
@@ -87,7 +88,7 @@ class KocomThermostatEntity(KocomEntity, ClimateEntity):
     @property
     def preset_mode(self) -> str:
         """Return the current preset mode."""
-        return PRESET_AWAY if self.packet._device.state[AWAY] else PRESET_NONE
+        return PRESET_AWAY if self.packet._device.state[AWAY_MODE] else PRESET_NONE
 
     @property
     def current_temperature(self) -> int:
@@ -166,22 +167,22 @@ class KocomACEntity(KocomEntity, ClimateEntity):
     def hvac_mode(self) -> HVACMode:
         """Return current HVAC mode."""
         if self.packet._device.state[POWER]:
-            oper_mode = self.packet._device.state[OPER_MODE]
+            op_mode = self.packet._device.state[OP_MODE]
             return {
-                ACPacket.OperMode.COOL: HVACMode.COOL,
-                ACPacket.OperMode.FAN_ONLY: HVACMode.FAN_ONLY,
-                ACPacket.OperMode.DRY: HVACMode.DRY,
-                ACPacket.OperMode.AUTO: HVACMode.AUTO,
-            }.get(oper_mode, HVACMode.OFF)
+                OpMode.COOL: HVACMode.COOL,
+                OpMode.FAN_ONLY: HVACMode.FAN_ONLY,
+                OpMode.DRY: HVACMode.DRY,
+                OpMode.AUTO: HVACMode.AUTO,
+            }.get(op_mode, HVACMode.OFF)
         return HVACMode.OFF
 
     @property
     def fan_mode(self) -> str:
         """Return current fan mode."""
         return {
-            ACPacket.FanMode.LOW: FAN_LOW,
-            ACPacket.FanMode.MEDIUM: FAN_MEDIUM,
-            ACPacket.FanMode.HIGH: FAN_HIGH,
+            FanMode.LOW: FAN_LOW,
+            FanMode.MEDIUM: FAN_MEDIUM,
+            FanMode.HIGH: FAN_HIGH,
         }.get(self.packet._device.state[FAN_MODE])
 
     @property
@@ -199,25 +200,25 @@ class KocomACEntity(KocomEntity, ClimateEntity):
         if hvac_mode == HVACMode.OFF:
             make_packet = self.packet.make_power_status(False)
         else:
-            hvac_to_oper_mode = {
-                HVACMode.COOL: ACPacket.OperMode.COOL,
-                HVACMode.FAN_ONLY: ACPacket.OperMode.FAN_ONLY,
-                HVACMode.DRY: ACPacket.OperMode.DRY,
-                HVACMode.AUTO: ACPacket.OperMode.AUTO,
+            hvac_to_op_mode = {
+                HVACMode.COOL: OpMode.COOL,
+                HVACMode.FAN_ONLY: OpMode.FAN_ONLY,
+                HVACMode.DRY: OpMode.DRY,
+                HVACMode.AUTO: OpMode.AUTO,
             }
-            oper_mode = hvac_to_oper_mode.get(hvac_mode)
-            if oper_mode is None:
+            op_mode = hvac_to_op_mode.get(hvac_mode)
+            if op_mode is None:
                 raise ValueError(f"Unknown HVAC mode: {hvac_mode}")
-            make_packet = self.packet.make_oper_mode(oper_mode)
+            make_packet = self.packet.make_op_mode(op_mode)
 
         await self.send_packet(make_packet)
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set a new target fan mode."""
         fan_speed = {
-            FAN_LOW: ACPacket.FanMode.LOW,
-            FAN_MEDIUM: ACPacket.FanMode.MEDIUM,
-            FAN_HIGH: ACPacket.FanMode.HIGH,
+            FAN_LOW: FanMode.LOW,
+            FAN_MEDIUM: FanMode.MEDIUM,
+            FAN_HIGH: FanMode.HIGH,
         }.get(fan_mode)
         if fan_speed is None:
             raise ValueError(f"Unknown fan mode: {fan_mode}")

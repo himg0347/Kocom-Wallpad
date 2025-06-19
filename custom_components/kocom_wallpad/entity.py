@@ -42,22 +42,14 @@ class KocomEntity(RestoreEntity):
         self.packet = packet
         self.packet_update_signal = f"{DOMAIN}_{self.gateway.host}_{self.device_id}"
         
-        self._attr_unique_id = f"{BRAND_NAME}_{self.device_id}_{self.gateway.host}"
+        self._attr_unique_id = f"{BRAND_NAME}_{self.device_id}-{self.gateway.host}"
         self._attr_name = f"{BRAND_NAME} {self.device_name}"
         self._attr_extra_state_attributes = {
             DEVICE_TYPE: self.packet._device.device_type,
             ROOM_ID: self.packet._device.room_id,
             SUB_ID: self.packet._device.sub_id,
         }
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, f"{self.packet._device.device_type}_{self.gateway.host}")},
-            manufacturer=MANUFACTURER,
-            model=MODEL,
-            name=f"{BRAND_NAME} {process_string(self.packet._device.device_type)}",
-            sw_version=SW_VERSION,
-            via_device=(DOMAIN, self.gateway.host),
-        )
-
+        
     @property
     def device_id(self) -> str:
         """Return the device id."""
@@ -73,19 +65,32 @@ class KocomEntity(RestoreEntity):
         return process_string(self.device_id.replace("_", " "))
     
     @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device information."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, f"{self.gateway.host}_{self.packet._device.device_type}")},
+            manufacturer=MANUFACTURER,
+            model=MODEL,
+            name=f"{BRAND_NAME} {process_string(self.packet._device.device_type)}",
+            sw_version=SW_VERSION,
+            via_device=(DOMAIN, self.gateway.host),
+        )
+        
+    @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        return self.gateway.connection.is_connected
+        return self.gateway.connection.is_connected()
     
     @callback
     def async_handle_packet_update(self, packet: KocomPacket) -> None:
         """Handle packet update."""
-        if self.packet._device.state != packet._device.state:
+        if self.packet.packet != packet.packet:
             self.packet = packet
             self.async_write_ha_state()
 
     async def async_added_to_hass(self) -> None:
         """When entity is added to hass."""
+        await super().async_added_to_hass()
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
@@ -93,7 +98,6 @@ class KocomEntity(RestoreEntity):
                 self.async_handle_packet_update
             )
         )
-        await super().async_added_to_hass()
     
     @property
     def extra_restore_state_data(self) -> RestoredExtraData:
@@ -104,10 +108,6 @@ class KocomEntity(RestoreEntity):
         }
         return RestoredExtraData(extra_data)
     
-    async def send_packet(
-        self, packet: bytearray | list[tuple[bytearray, float | None]]
-    ) -> None:
+    async def send_packet(self, packet: bytes) -> None:
         """Send a packet to the gateway."""
-        if not packet:
-            return
-        return await self.gateway.client.send_packet(packet)
+        await self.gateway.client.send_packet(packet)

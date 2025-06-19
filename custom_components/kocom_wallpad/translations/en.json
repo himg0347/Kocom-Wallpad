@@ -7,9 +7,6 @@
                 "data": {
                     "host": "Host",
                     "port": "Port"
-                },
-                "data_description": {
-                    "host": "If it is serial communication, enter Host and ignore Port."
                 }
             }
         },

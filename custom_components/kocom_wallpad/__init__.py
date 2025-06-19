@@ -9,7 +9,6 @@ from homeassistant.config_entries import ConfigEntry
 from .gateway import KocomGateway
 from .const import DOMAIN, LOGGER
 
-
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.CLIMATE,

@@ -6,10 +6,7 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.config_entries import (
-    ConfigFlow,
-    ConfigFlowResult,
-)
+from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 import homeassistant.helpers.config_validation as cv
 
 from .connection import test_connection
